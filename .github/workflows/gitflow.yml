@@ -34,25 +34,3 @@ jobs:
             echo "branch_ok=false" >> $GITHUB_ENV
             exit 1
           fi
-
-      - name: Ajouter un commentaire sur le PR si erreur
-        if: env.commit_ok == 'false' || env.branch_ok == 'false'
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { owner, repo, number } = context.issue;
-            let message = "⚠️ **Problèmes détectés :**\n";
-            if (process.env.commit_ok == 'false') {
-              message += "- Le message de commit ne suit pas la convention. Exemple attendu : `feat: ajout d'une nouvelle fonctionnalité`\n";
-            }
-            if (process.env.branch_ok == 'false') {
-              message += "- Le nom de la branche ne suit pas la convention. Exemple attendu : `feat/nouvelle-fonctionnalite`\n";
-            }
-            message += "\n **Veuillez respecter les règles de nommage définies dans le README.**";
-            github.issues.createComment({
-              owner,
-              repo,
-              issue_number: number,
-              body: message
-            });
