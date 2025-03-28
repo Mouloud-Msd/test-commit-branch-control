@@ -4,7 +4,10 @@ on:
   pull_request:
     branches:
       - "**" # Vérifie toutes les branches quand un PR est créé ou mis à jour
-
+on:
+  push:
+    branches:
+      - "**"  # Vérifie toutes les branches
 jobs:
   check-commits:
     runs-on: ubuntu-latest
