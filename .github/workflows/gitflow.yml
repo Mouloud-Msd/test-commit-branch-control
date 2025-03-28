@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - "**" # Vérifie toutes les branches
+
 jobs:
   check-commits:
     runs-on: ubuntu-latest
@@ -43,7 +44,11 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { owner, repo, number } = context.issue;
+            const { owner, repo, pull_request } = context.issue;
+            if (!pull_request) {
+              console.log("❌ Ce workflow ne s'exécute pas dans le contexte d'un pull request.");
+              return;
+            }
             let message = "⚠️ **Problèmes détectés :**\n";
             if (process.env.commit_ok == 'false') {
               message += "- ❌ Le message de commit ne suit pas la convention. Exemple attendu : `feat: ajout d'une nouvelle fonctionnalité`\n";
@@ -52,9 +57,12 @@ jobs:
               message += "- ❌ Le nom de la branche ne suit pas la convention. Exemple attendu : `feat/nouvelle-fonctionnalite`\n";
             }
             message += "\n📝 **Veuillez respecter les règles de nommage définies dans le README.**";
-            github.issues.createComment({
-              owner,
-              repo,
-              issue_number: number,
-              body: message
-            });
+
+            if (context.payload.pull_request) {
+              github.issues.createComment({
+                owner,
+                repo,
+                issue_number: context.payload.pull_request.number,
+                body: message
+              });
+            }
