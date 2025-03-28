@@ -1,0 +1,58 @@
+name: Vérification des commits et branches
+
+on:  
+  pull_request:
+    branches:
+      - "**" # Vérifie toutes les branches quand un PR est créé ou mis à jour
+
+jobs:
+  check-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Vérification des messages de commit
+        id: check_commit
+        run: |
+          if git log --format=%B -n 1 | grep -qE "^(feat|fix|chore|docs|style|refactor|test|perf): .+"; then
+            echo "✅ Message de commit valide."
+            echo "commit_ok=true" >> $GITHUB_ENV
+          else
+            echo "❌ Mauvais format de commit."
+            echo "commit_ok=false" >> $GITHUB_ENV
+          fi
+
+      - name: Vérification du nom de branche
+        id: check_branch
+        run: |
+          BRANCH_NAME=$(echo "${{ github.head_ref }}")
+          if echo "$BRANCH_NAME" | grep -qE "^(feat|fix|chore|docs|style|refactor|test|perf)/.+$"; then
+            echo "✅ Nom de branche valide."
+            echo "branch_ok=true" >> $GITHUB_ENV
+          else
+            echo "❌ Mauvais format de branche."
+            echo "branch_ok=false" >> $GITHUB_ENV
+          fi
+
+      - name: Ajouter un commentaire sur le PR si erreur
+        if: env.commit_ok == 'false' || env.branch_ok == 'false'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo, number } = context.issue;
+            let message = "⚠️ **Problèmes détectés :**\n";
+            if (process.env.commit_ok == 'false') {
+              message += "- ❌ Le message de commit ne suit pas la convention. Exemple attendu : `feat: ajout d'une nouvelle fonctionnalité`\n";
+            }
+            if (process.env.branch_ok == 'false') {
+              message += "- ❌ Le nom de la branche ne suit pas la convention. Exemple attendu : `feat/nouvelle-fonctionnalite`\n";
+            }
+            message += "\n📝 **Veuillez respecter les règles de nommage définies dans le README.**";
+            github.issues.createComment({
+              owner,
+              repo,
+              issue_number: number,
+              body: message
+            });
